@@ -4,7 +4,8 @@ library(ggplot2)
 
 #---------------------CSV---------------------
 data<-read.csv(file="https://covid-19.nchc.org.tw/api/csv?CK=covid-19@nchc.org.tw&querydata=4051&limited=TWN",header=TRUE,sep=",",fileEncoding = "big5")
-#data<-read.csv(file="https://covid-19.nchc.org.tw/api/csv?CK=covid-19@nchc.org.tw&querydata=3001&limited=TWN&chartset=[utf-8|big5]",header=TRUE,sep=",",fileEncoding = "big5") #數據更多但內容有少許問題
+#data2<-read.csv(file="https://covid-19.nchc.org.tw/api/csv?CK=covid-19@nchc.org.tw&querydata=3001&limited=TWN",header=TRUE,sep=",",fileEncoding = "big5")
+#數據更多但內容有少許問題
 data<-data[,c(5:7,9)] #下面的表是5:7,12
 names(data)<-list("Date","Total","Num","Per")
 #日期格式為文字(x軸順序會亂掉)，轉為日期
@@ -38,16 +39,17 @@ ui <- fluidPage(
                   value=c(as.Date("2022-09-01"),data$Date[nrow(data)]),
                   timeFormat="%Y-%m-%d"),
       #選擇均線
-      radioButtons("cycle","選擇均線種類",list("7日"="week_avg","30日"="month_avg"),"week_avg"),
+      radioButtons("cycle","選擇移動平均確診天數",list("7日"="week_avg","30日"="month_avg"),"week_avg"),
       #選擇圖表
-      selectInput("switch","選取資料種類",list("每日確診數"="Days","累計確診數"="Total","每百萬人確診數"="Per"),"Days")
+      selectInput("switch","選取資料種類",list("每日確診數"="Days","累計確診數"="Total","每百萬人確診數"="Per"),"Days"),
+      tags$b("資料來源：",tags$br(),tags$a("COVID-19全球疫情地圖",href="https://covid-19.nchc.org.tw/index.php"))
     ),
     mainPanel(
       tabsetPanel(id="tabset",type="hidden",
         #每日圖
         tabPanel(
           "Days",
-          tags$h3(tags$b("　　2022每日新增確診數與均線圖")),
+          tags$h3(tags$b("　　每日新增確診與移動平均新增確診數")),
           plotOutput("day_plot",brush = "plot_brush"),
           tags$b("表格會顯示框選範圍日期的數據",style="color:blue"),
           dataTableOutput("day_table"),
@@ -108,7 +110,7 @@ server <- function(input, output, session) {
   )
   #顯示範圍內的資料
   output$day_table<-renderDataTable(
-    data2<-data %>% filter(Date >= min_date() & Date <= max_date()) %>% select("日期"=Date,"新增確診數"=Num,"7日平均數"=week_avg,"30日平均數"=month_avg),
+    data2<-data %>% filter(Date >= min_date() & Date <= max_date()) %>% select("日期"=Date,"新增確診數"=Num,"7日移動平均"=week_avg,"30日移動平均"=month_avg),
     options=list(pageLength=10,searching = FALSE)
   )
   #---------------------Total---------------------
@@ -124,7 +126,7 @@ server <- function(input, output, session) {
       theme(panel.background = element_rect(fill="#faebd7"))
   )
   #表格用判定X軸
-  click_date<-reactive(
+  date_click<-reactive(
     if(is.null(input$plot_click[[1]])){
       input$date_range[2]
     }else{
@@ -133,7 +135,7 @@ server <- function(input, output, session) {
   )
   #顯示指向日期資料 paging(分頁) searching(搜尋功能)
   output$total_table<-renderDataTable(
-    data %>% filter(Date >= click_date()-3 & Date <= click_date()+3 & Date >= min_date()) %>% select("日期"=Date,"新增確診數"=Num,"確診累積數"=Total),
+    data %>% filter(Date >= date_click()-3 & Date <= date_click()+3 & Date >= min_date()) %>% select("日期"=Date,"新增確診數"=Num,"確診累積數"=Total),
     options=list(pageLength = 1,paging=FALSE,searching = FALSE)
   )
   #---------------------Per---------------------
