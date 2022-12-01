@@ -67,7 +67,9 @@ ui <- fluidPage(
           "Per",
           tags$h3(tags$b("　　每百萬人確診數")),
           plotOutput("per_plot"),
-          tags$b("截至",data$Date[nrow(data)],"每百萬人確診數為",tags$em(data$Per[nrow(data)]),"人")
+          tags$b("截至",data$Date[nrow(data)],"每百萬人確診數為",tags$em(data$Per[nrow(data)]),"人 (",round(data$Per[nrow(data)]/10000,3),"% )"),
+          #確診圓餅圖
+          plotOutput("per_pie")
         )
       )
 
@@ -89,7 +91,7 @@ server <- function(input, output, session) {
       geom_bar(aes(Date,Num,fill=month), stat = "identity")+
       geom_line(aes_string("Date",input$cycle),color="blue")+
       scale_x_date(date_labels = "%b",date_breaks = "1 month")+
-      labs(x="日期",y="確診數")+
+      labs(x=NULL,y="確診數",fill="月份")+
       theme(panel.background = element_rect(fill="#faebd7")) 
   )
   #表格用最早日期
@@ -122,7 +124,7 @@ server <- function(input, output, session) {
       scale_x_date(date_labels = "%b",date_breaks = "1 month")+
       scale_y_continuous(name="每日新增確診數",
                          sec.axis = sec_axis(~.*100/10000, name="累計確診數(單位:萬)"))+
-      labs(x="日期")+
+      labs(x=NULL,fill="月份")+
       theme(panel.background = element_rect(fill="#faebd7"))
   )
   #表格用判定X軸
@@ -145,8 +147,16 @@ server <- function(input, output, session) {
       geom_density(aes(Date,Per/10000),stat = "identity",color="blue",fill="blue",alpha=0.1)+
       scale_x_date(date_labels = "%b",date_breaks = "1 month")+
       ylim(0,100)+
-      labs(x="日期",y="每百萬人確診數(單位:萬)")+
+      labs(x=NULL,y="每百萬人確診數(單位:萬)")+
       theme(panel.background = element_rect(fill="#faebd7"))
+  )
+  #圓餅圖
+  output$per_pie<-renderPlot(
+    data.frame(type=c("未確診","確診"),num=c(1000000-data$Per[nrow(data)],data$Per[nrow(data)])) %>%
+    ggplot(aes("",num,fill=type))+
+      geom_bar(stat="identity",width=1)+
+      coord_polar(theta="y",start=0)+
+      labs(x=NULL, y=NULL,fill=NULL)
   )
   #---------------------Select---------------------
   #圖表選擇
